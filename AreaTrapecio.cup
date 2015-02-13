@@ -1,0 +1,77 @@
+
+/* Importamos las clases necesarias del paquete cup.jar */
+package areatrapecio;
+
+import java.io.FileReader;
+import java_cup.runtime.*;
+
+
+parser code {:
+
+
+/* Reporte de error */
+    public void report_error(String message, Object info) { // recive el mensaje y el valor de la informacion
+        StringBuilder m = new StringBuilder("Error"); // Inicializa una nueva instancia de la clase StringBuilder con la cadena especificada, guarda la cadena "Error" en la variable m
+        if (info instanceof java_cup.runtime.Symbol) { // conprueba k la informacion k se recive sea de tipo simbol
+            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info); // la informacion que k se recivio la guardamos en la variable s
+            if (s.left >= 0) {          //   Comprueba si la informacion symbol es mayor o igual a cero, pero en lado izquierdo.
+                m.append(" in line "+(s.left+1)); // concatena la palabra "Error" con la frace "in line", y muestre en que linea se encuentra el error
+                if (s.right >= 0)       // Comprueba si la informacion symbol es mayor o igual a cero, pero en lado derecho.
+                    m.append(", column "+(s.right+1)); // concatena la palabra "Error" con la frace "column", y muestre en que columna se encuentra el error
+            }
+        }
+        m.append(" : "+message); // concatena ":" con el mensaje de error
+        System.err.println(m); // imprime el error
+    }
+   
+    /* Cuando se encuentra un error de donde el sistema no puede
+        recuperarse, se lanza un error fatal. Se despliega el mensaje
+        de error y finaliza la ejecucion. */
+    public void report_fatal_error(String message, Object info) { // recive el mensaje y el valor de la informacion
+        report_error(message, info); // llama al metodo report_error y le envia los parametros
+        System.exit(1); // finaliza la ejecucion 
+    }
+
+    /* Metodo main para garantizar la ejecucion del analizador
+       lexico y sintactico*/
+    public static void main(String[] args){ // 
+        try {
+            AnalizadorSintactico asin = new AnalizadorSintactico( // creamos una instancia de la clase AnalizadorSintactico
+                    new AreaTrapecio( new FileReader(args[0])));  // sirve para leer el archivo txt
+            Object result = asin.parse().value;                   // ejecutar el parse
+            System.out.println("\n*********** Fin de ejecucion **********"); // imprime mensaje 
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+// metodo para calcular el area de un trapecio
+public void calcularArea(int Bmayor, int Bmenor, int AlturaTra){ // recibimos los tres parametros
+  int area=0; // inicializamos en cero
+  area=((Bmayor+Bmenor)*AlturaTra)/2; // formula del area del trapecio
+  System.out.println(" EL AREA DEL TRAPECIO ES: "+ area); // imprime el resultado
+}
+
+:}; // fin del parser code
+
+
+terminal COMA, FINLINEA; // declaramos las terminales 
+terminal Integer NUMERO; // declaramos las terminales de tipo Integer
+//terminal Integer Bmayor,Bmenor,AlturaTra;
+
+non terminal Object atrape,linea; // declaramos las no terminales de tipo Object
+
+/* EXPRESIONES */
+
+atrape::=atrape linea | linea; // inicia la exprecion 
+
+linea::=  error {:parser.report_fatal_error("FAlTA EL PRIMER NUMERO (BASE MENOR)", 4 ); :} // verifica el primer numero, " ,4,2 AreaTrapecio"
+| NUMERO  error {:parser.report_fatal_error("FAlTA UNA COMA EN PRIMER NUMERO", 2 ); :}// verifica la primera coma, " 6 4,2 AreaTrapecio"
+| NUMERO COMA error {:parser.report_fatal_error("FAlTA EL SEGUNDO NUMERO (BASE MAYOR)", 4 ); :} // verifica el segundo numero, " 6, ,2 AreaTrapecio"
+| NUMERO COMA NUMERO error {:parser.report_fatal_error("FAlTA UNA COMA EN SEGUNDO NUMERO", 2 ); :}// verificar la segundo coma, " 6,4 2 AreaTrapecio"
+| NUMERO COMA NUMERO COMA  error {:parser.report_fatal_error("FAlTA EL TERCER NUMERO (ALTURA)", 4 ); :} // verifica el tercer numero, " 6,4,  AreaTrapecio"
+| NUMERO COMA NUMERO COMA NUMERO error {:parser.report_fatal_error("FAlTA LA PALABRA RESERVADA <<AreaTrapecio>>", 3 ); :} //verifica fin linea, " 6,4,2 "
+
+| NUMERO:bma  COMA NUMERO:bme COMA NUMERO:al FINLINEA {:parser.calcularArea(bma,bme,al); :}; // llamamos al metodo calcular area y le enviamos los parametros
+
+
